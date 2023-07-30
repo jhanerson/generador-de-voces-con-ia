@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,23 +8,53 @@
   <!-- Agregar el enlace a Bootstrap -->
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
+
 <body>
   <div class="container mt-5">
     <div class="form-group">
       <label for="texto">Introduce el texto que deseas convertir a voz:</label>
       <textarea class="form-control" id="texto" rows="4"></textarea>
     </div>
-    <button class="btn btn-primary" onclick="convertirAVoz()">Reproducir Audio</button>
+    <div class="form-group">
+      <label for="selectVoz">Selecciona la voz:</label>
+      <select class="form-control" id="selectVoz">
+        <!-- Las opciones de voz se cargarán aquí dinámicamente -->
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="escucharTexto()">Escuchar Texto</button>
     <button class="btn btn-success" onclick="exportarAMp3()">Exportar a MP3</button>
   </div>
 
-  <script>
-    // JavaScript para convertir el texto a voz y exportarlo a MP3
-    function convertirAVoz() {
-      var texto = document.getElementById('texto').value;
-      var apiKey = 'TU_CLAVE_DE_API_DE_GOOGLE_TEXT_TO_SPEECH'; // Reemplaza con tu clave de API
-      var url = 'https://texttospeech.googleapis.com/v1/text:synthesize?key=' + apiKey;
+  <!-- Elemento de audio para la audición previa -->
+  <audio id="audioPreview" controls style="display: none;"></audio>
 
+  <script>
+    function obtenerVocesDisponibles() {
+      var apiKey = 'TU_CLAVE_DE_API_DE_GOOGLE_TEXT_TO_SPEECH';
+      var url = 'https://texttospeech.googleapis.com/v1/voices?key=' + apiKey;
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          var voices = data.voices;
+          var select = document.getElementById('selectVoz');
+          voices.forEach(voice => {
+            var option = document.createElement('option');
+            option.text = voice.name;
+            option.value = voice.name;
+            select.appendChild(option);
+          });
+        })
+        .catch(error => console.error('Error al obtener las voces:', error));
+    }
+
+    // Llama a la función para cargar las voces disponibles cuando se cargue la página
+    obtenerVocesDisponibles();
+
+    function escucharTexto() {
+      var texto = document.getElementById('texto').value;
+      var vozSeleccionada = document.getElementById('selectVoz').value;
+      var apiKey = 'TU_CLAVE_DE_API_DE_GOOGLE_TEXT_TO_SPEECH';
+      var url = 'https://texttospeech.googleapis.com/v1/text:synthesize?key=' + apiKey;
       fetch(url, {
         method: 'POST',
         headers: {
@@ -34,34 +65,63 @@
             text: texto,
           },
           voice: {
-            languageCode: 'es-ES', // Cambiar por el idioma de tu preferencia, en formato ISO 639-1
-            name: 'es-ES-Standard-A', // Cambiar por la voz de tu preferencia, puedes encontrar otras opciones en la documentación de Google Text-to-Speech
+            languageCode: 'es-ES',
+            name: vozSeleccionada, // Utiliza la voz seleccionada
           },
           audioConfig: {
             audioEncoding: 'MP3',
           },
         }),
       })
-      .then(response => response.arrayBuffer())
-      .then(buffer => {
-        var blob = new Blob([buffer], { type: 'audio/mp3' });
-
-        // Crear un enlace de descarga para el archivo MP3
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'texto_convertido.mp3';
-        a.click();
-        URL.revokeObjectURL(url);
-      })
-      .catch(error => console.error('Error al convertir el texto a voz:', error));
+        .then(response => response.arrayBuffer())
+        .then(buffer => {
+          var blob = new Blob([buffer], { type: 'audio/mp3' });
+          var url = URL.createObjectURL(blob);
+          var audioPreview = document.getElementById('audioPreview');
+          audioPreview.src = url;
+          audioPreview.style.display = 'block';
+          audioPreview.play();
+          URL.revokeObjectURL(url);
+        })
+        .catch(error => console.error('Error al convertir el texto a voz:', error));
     }
 
     function exportarAMp3() {
-      // Esta función es similar a la función convertirAVoz(), ya que ambas utilizan la API de Google Text-to-Speech.
-      // Puedes dejarla como está o incluso eliminarla si prefieres tener solo un botón para reproducir el audio y luego exportarlo manualmente si lo deseas.
-      convertirAVoz();
+      var texto = document.getElementById('texto').value;
+      var vozSeleccionada = document.getElementById('selectVoz').value;
+      var apiKey = 'TU_CLAVE_DE_API_DE_GOOGLE_TEXT_TO_SPEECH';
+      var url = 'https://texttospeech.googleapis.com/v1/text:synthesize?key=' + apiKey;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: {
+            text: texto,
+          },
+          voice: {
+            languageCode: 'es-ES',
+            name: vozSeleccionada, // Utiliza la voz seleccionada
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+          },
+        }),
+      })
+        .then(response => response.arrayBuffer())
+        .then(buffer => {
+          var blob = new Blob([buffer], { type: 'audio/mp3' });
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = 'texto_convertido.mp3';
+          a.click();
+          URL.revokeObjectURL(url);
+        })
+        .catch(error => console.error('Error al convertir el texto a MP3:', error));
     }
   </script>
 </body>
+
 </html>
